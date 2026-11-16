@@ -1,0 +1,4 @@
+# Allow the logged-in user to configure ASUS ROG Keris mice without root.
+# Must sort before 73-seat-late.rules, which turns the uaccess tag into an ACL.
+# Install: sudo cp 70-rog-keris.rules /etc/udev/rules.d/ && sudo udevadm control --reload && sudo udevadm trigger
+SUBSYSTEM=="hidraw", ATTRS{idVendor}=="0b05", ATTRS{idProduct}=="1960|195e|195c|1a57|1a59", TAG+="uaccess"

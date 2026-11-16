@@ -1,0 +1,24 @@
+[package]
+name = "keris-ctl"
+version = "0.1.0"
+edition = "2021"
+description = "Lightweight settings tool for the ASUS ROG Keris Wireless mouse (Linux + Windows)"
+license = "GPL-3.0-or-later"
+
+[dependencies]
+eframe = { version = "0.31", default-features = false, features = ["glow", "default_fonts", "x11", "wayland"] }
+
+# Linux: talk to /dev/hidraw directly, no C library needed
+[target.'cfg(target_os = "linux")'.dependencies]
+libc = "0.2"
+
+# Windows: pure-Rust hidapi backend (no C compiler needed)
+[target.'cfg(windows)'.dependencies]
+hidapi = { version = "2.6", default-features = false, features = ["windows-native"] }
+
+[profile.release]
+opt-level = "s"
+lto = true
+codegen-units = 1
+panic = "abort"
+strip = true

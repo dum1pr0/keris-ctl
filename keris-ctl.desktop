@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=ROG Keris Wireless
+GenericName=Mouse Settings
+Comment=Configure DPI, polling rate, lighting and buttons of the ROG Keris mouse
+Exec=keris-ctl
+Icon=input-mouse
+Terminal=false
+Categories=Settings;HardwareSettings;
+Keywords=mouse;asus;rog;keris;dpi;rgb;
+StartupWMClass=keris-ctl
