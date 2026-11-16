@@ -15,6 +15,11 @@ Settings are written to the mouse's onboard memory, so the app does not need to 
 - Auto sleep and low-battery warning
 - Button remapping (mouse, media and keyboard keys)
 
+## Download
+
+Prebuilt Linux and Windows binaries are on the [Releases](../../releases) page.
+To publish a new release, push a tag: `git tag v0.1.1 && git push origin v0.1.1`.
+
 ## Build
 
 ```sh
