@@ -292,6 +292,9 @@ pub enum Setting {
     Profile(u8),
     /// (0-based slot, dpi)
     Dpi(usize, u16),
+    /// All DPI slots at once, one flash save. Used to change the active DPI
+    /// (see `rotate_dpi`).
+    DpiStages([u16; DPI_SLOTS]),
     Polling(u16),
     Debounce(u8),
     AngleSnapping(bool),
@@ -386,6 +389,36 @@ impl Mouse {
         Ok((pct, charging, p[6], p[7].saturating_mul(25)))
     }
 
+    /// Cheap live read: (profile 0-based, active DPI slot 1-based).
+    pub fn read_profile(&self) -> Result<(u8, u8)> {
+        let p = self.xfer(&[0x00, 0x12, 0x00], 4)?;
+        // the dongle answers with slot 0 when it can't reach the mouse
+        if p[12] == 0 || p[12] as usize > DPI_SLOTS {
+            return Err(Error::Asleep);
+        }
+        Ok((p[11], p[12]))
+    }
+
+    /// Reads pending input reports for up to `ms`. Returns true if the mouse
+    /// reported a state change (e.g. DPI button / profile switch). `12 01` is
+    /// the raw button bitmap and precedes the actual change, so it also counts.
+    pub fn poll_events(&self, ms: i32) -> Result<bool> {
+        let mut buf = [0u8; PKT];
+        let mut changed = false;
+        let mut wait = ms;
+        for _ in 0..64 {
+            let n = self.hid.read_timeout(&mut buf, wait)?;
+            if n == 0 {
+                break;
+            }
+            if buf[0] == 0x12 {
+                changed = true;
+            }
+            wait = 0;
+        }
+        Ok(changed)
+    }
+
     pub fn read_state(&self) -> Result<State> {
         let mut s = State::default();
 
@@ -459,11 +492,18 @@ impl Mouse {
                 if slot >= DPI_SLOTS {
                     return bad(format!("DPI slot must be 1..{DPI_SLOTS}"));
                 }
-                if !(DPI_MIN..=DPI_MAX).contains(&dpi) {
-                    return bad(format!("DPI must be {DPI_MIN}..{DPI_MAX}"));
+                check_dpi(dpi)?;
+                self.set(&dpi_packet(slot, dpi))
+            }
+            Setting::DpiStages(dpi) => {
+                for &d in &dpi {
+                    check_dpi(d)?;
                 }
-                let enc = ((dpi - DPI_STEP) / DPI_STEP).to_le_bytes();
-                self.set(&[0x00, 0x51, 0x31, slot as u8, 0x00, enc[0], enc[1]])
+                for (slot, &d) in dpi.iter().enumerate() {
+                    self.xfer(&dpi_packet(slot, d), 3)?;
+                }
+                self.xfer(&[0x00, 0x50, 0x03], 3)?;
+                Ok(())
             }
             Setting::Polling(hz) => {
                 let Some(i) = POLLING_RATES.iter().position(|&r| r == hz) else {
@@ -524,6 +564,28 @@ impl Mouse {
             }
         }
     }
+}
+
+/// The firmware has no "select DPI stage" command (51 31 09 / 0A answer FF AA,
+/// verified on hardware), so the active slot can only be changed with the DPI
+/// button. To make slot `target` (0-based) the active DPI anyway, rotate the
+/// stage values so `dpi[target]` lands in the `active` slot (0-based). The
+/// order the DPI button cycles through stays the same.
+pub fn rotate_dpi(dpi: &[u16; DPI_SLOTS], active: usize, target: usize) -> [u16; DPI_SLOTS] {
+    std::array::from_fn(|i| dpi[(i + DPI_SLOTS - active % DPI_SLOTS + target) % DPI_SLOTS])
+}
+
+fn check_dpi(dpi: u16) -> Result<()> {
+    if (DPI_MIN..=DPI_MAX).contains(&dpi) {
+        Ok(())
+    } else {
+        Err(Error::Invalid(format!("DPI must be {DPI_MIN}..{DPI_MAX}")))
+    }
+}
+
+fn dpi_packet(slot: usize, dpi: u16) -> [u8; 7] {
+    let enc = ((dpi - DPI_STEP) / DPI_STEP).to_le_bytes();
+    [0x00, 0x51, 0x31, slot as u8, 0x00, enc[0], enc[1]]
 }
 
 fn bind_packet(src: u16, dst: u16) -> [u8; 9] {

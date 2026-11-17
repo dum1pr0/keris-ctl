@@ -9,6 +9,10 @@ Settings are written to the mouse's onboard memory, so the app does not need to 
 
 - 3 onboard profiles
 - 4 DPI stages (100 – 16000, step 100)
+- Shows the active DPI live (also when you press the DPI button on the mouse)
+- Switch the active DPI from the app. The firmware has no "select stage" command,
+  so the app rotates the stage values so the chosen one lands in the active slot;
+  the DPI button keeps cycling in the same order.
 - Polling rate 125 / 250 / 500 / 1000 Hz
 - Button debounce 12 – 32 ms, angle snapping, lift-off distance
 - RGB for logo / scroll wheel: static, breathing, color cycle, reactive, battery level, off
@@ -18,7 +22,7 @@ Settings are written to the mouse's onboard memory, so the app does not need to 
 ## Download
 
 Prebuilt Linux and Windows binaries are on the [Releases](../../releases) page.
-To publish a new release, push a tag: `git tag v0.1.1 && git push origin v0.1.1`.
+To publish a new release, push a tag: `git tag v0.2.1 && git push origin v0.2.1`.
 
 ## Build
 
@@ -51,6 +55,7 @@ Run without arguments to open the GUI. CLI:
 keris-ctl list
 keris-ctl info
 keris-ctl dpi 1 800
+keris-ctl dpi use 3             # make stage 3's DPI the active one
 keris-ctl poll 1000
 keris-ctl light all static 4 00aaff
 keris-ctl sleep 5

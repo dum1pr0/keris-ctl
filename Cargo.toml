@@ -1,6 +1,6 @@
 [package]
 name = "keris-ctl"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
 description = "Lightweight settings tool for the ASUS ROG Keris Wireless mouse (Linux + Windows)"
 license = "GPL-3.0-or-later"

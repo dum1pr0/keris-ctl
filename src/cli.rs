@@ -13,6 +13,7 @@ COMMANDS:
   info                              show current settings
   profile <1-3>                     switch onboard profile
   dpi <slot 1-4> <100-16000>        set DPI of a slot (step 100)
+  dpi use <slot 1-4>                make that slot's DPI the active one
   poll <125|250|500|1000>           polling rate (Hz)
   debounce <12|16|20|24|28|32>      button debounce (ms)
   angle <on|off>                    angle snapping
@@ -124,6 +125,19 @@ fn on_off(s: Option<&&str>) -> std::result::Result<bool, String> {
 fn parse_setting(cmd: &str, a: &[&str], mouse: &Mouse) -> std::result::Result<Setting, String> {
     Ok(match cmd {
         "profile" => Setting::Profile(num::<u8>(a.first(), "profile")?.wrapping_sub(1)),
+        "dpi" if a.first() == Some(&"use") => {
+            let target: usize = num(a.get(1), "slot")?;
+            if !(1..=DPI_SLOTS).contains(&target) {
+                return Err(format!("slot must be 1..{DPI_SLOTS}"));
+            }
+            let s = mouse.read_state().map_err(|e| e.to_string())?;
+            if s.asleep || s.dpi_slot == 0 {
+                return Err("mouse is asleep".into());
+            }
+            let active = s.dpi_slot as usize - 1;
+            println!("active DPI: {} -> {}", s.dpi[active], s.dpi[target - 1]);
+            Setting::DpiStages(rotate_dpi(&s.dpi, active, target - 1))
+        }
         "dpi" => {
             let slot: usize = num(a.first(), "slot")?;
             Setting::Dpi(slot.wrapping_sub(1), num(a.get(1), "DPI")?)
